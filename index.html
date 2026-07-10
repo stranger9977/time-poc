@@ -175,11 +175,11 @@
 <!-- ================= ACT 2 ================= -->
 <section id="act2"><div class="wrap">
   <div class="act">Exhibit 2 · The aging experiment</div>
-  <h2>Velocity doesn’t beat reflexes. It beats anticipation.</h2>
-  <p class="lede">Raw reaction speed peaks in your early 20s. The cue library — anticipation — only grows.
-  So here's a natural experiment: if old hitters survive on prediction, they should hang with young hitters
-  on ordinary fastballs and fall apart exactly where prediction stops working — top-end velocity,
-  where the decision window collapses toward zero.</p>
+  <h2>The hitters with the slowest reflexes are the hardest to fool.</h2>
+  <p class="lede">Raw reaction speed peaks in your early 20s and declines every year after. The cue
+  library — anticipation — only grows. So if hitting a fastball were a <i>reaction</i> task, hitters
+  pushing 40 should be the most fooled people in the sport, especially at top-end velocity where the
+  decision window collapses toward zero. Here's what actually happens.</p>
 
   <div class="card">
     <h3>Whiff rate on four-seam fastballs, by hitter age × velocity</h3>
@@ -189,9 +189,10 @@
     <div class="controls"><button id="tableBtn">Table view</button></div>
     <div class="tableWrap" id="ageTable"></div>
     <p class="note" id="ageNote"></p>
-    <p class="note"><b>Honest caveats for the video:</b> cross-sectional, not longitudinal — hitters still playing at 34+
-    are survivors, which should make them look <i>better</i>, not worse; the fact that they still lose the top-velocity
-    comparison strengthens the point. Whiff rate on swings; four-seamers only; sample sizes in the tooltips.</p>
+    <p class="note"><b>Honest caveats for the video:</b> cross-sectional and survivor-biased — only elite hitters are
+    still employed at 34+. But notice which way that cuts: the survivors are precisely the players whose raw reflexes
+    have declined the most, and they're still the hardest to beat. Whatever they're running on, it isn't reaction speed.
+    Whiff rate on swings; four-seamers only; sample sizes in the tooltips and table.</p>
   </div>
 </div></section>
 
@@ -456,7 +457,8 @@ function buildAgeChart() {
   order.forEach(({b, i}) => {
     const ly = Math.max(b._endY + 4, prevY + 17);
     prevY = ly;
-    const lbl = el('text', {x: b._endX + 14, y: ly, fill: AGE_COLORS[i], 'font-size': 13, 'font-weight': 650}, chart);
+    el('line', {x1: b._endX + 10, y1: ly - 4, x2: b._endX + 22, y2: ly - 4, stroke: AGE_COLORS[i], 'stroke-width': 3, 'stroke-linecap': 'round'}, chart);
+    const lbl = el('text', {x: b._endX + 28, y: ly, fill: 'var(--ink-2)', 'font-size': 13, 'font-weight': 600}, chart);
     lbl.textContent = 'age ' + b.band;
   });
 
@@ -481,7 +483,8 @@ function buildAgeChart() {
   const young = bands[0], old = bands[bands.length - 1];
   const gapLow = (old.points[0].rate - young.points[0].rate) * 100;
   const gapHigh = (old.points[old.points.length - 1].rate - young.points[young.points.length - 1].rate) * 100;
-  $('#ageNote').innerHTML = `<b>The tell:</b> below 92 mph the 34+ hitters whiff ${gapLow <= 0 ? 'no more — actually ' + Math.abs(gapLow).toFixed(1) + ' pts <i>less</i> —' : 'only ' + gapLow.toFixed(1) + ' pts more'} than hitters in their early 20s: three decades of cue-reading cancels the reflex gap. At 98+, where the decision window collapses and prediction runs out of road, the gap ${gapHigh > gapLow ? 'blows open to ' + gapHigh.toFixed(1) + ' points' : 'moves to ' + gapHigh.toFixed(1) + ' points'}. Velocity doesn't beat their eyes — it beats their forecast.`;
+  const diffTxt = d => Math.abs(d).toFixed(1) + ' pts ' + (d < 0 ? '<i>less</i>' : 'more');
+  $('#ageNote').innerHTML = `<b>Two things are true at once.</b> Every line climbs — each extra mph steals decision time from everyone, which is Exhibit 1 in action. But the 34+ hitters, who own the slowest raw reflexes on the field, whiff ${diffTxt(gapLow)} than the early-20s group on sub-92 fastballs — and still ${diffTxt(gapHigh)} at 98+. If hitting were reaction, that ordering is impossible. It's prediction, compounding for fifteen years.`;
 
   // table view
   const head = '<tr><th>Age band</th>' + buckets.map(b => `<th>${b} mph</th>`).join('') + '</tr>';
