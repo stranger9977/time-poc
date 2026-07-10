@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIME — why the game slows down (POC)</title>
+<style>
+  /* ---- palette roles (dark, committed) ---- */
+  :root {
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --muted:       #898781;
+    --grid:        #2c2c2a;
+    --baseline:    #383835;
+    --border:      rgba(255,255,255,0.10);
+    --blue:        #3987e5;
+    --aqua:        #199e70;
+    --yellow:      #c98500;
+    --violet:      #9085e9;
+    --magenta:     #d55181;
+    --critical:    #d03b3b;
+    --good:        #0ca30c;
+    /* ordinal ramp, young -> old */
+    --age-1: #b7d3f6; --age-2: #6da7ec; --age-3: #2a78d6; --age-4: #184f95;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--blue); }
+
+  /* hero */
+  .hero { padding: 96px 0 72px; text-align: center; }
+  .kicker {
+    font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 20px;
+  }
+  .hero h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; font-weight: 750; }
+  .hero h1 .dim { color: var(--muted); }
+  .hero p { max-width: 620px; margin: 24px auto 0; color: var(--ink-2); font-size: 18px; }
+
+  section { padding: 72px 0; border-top: 1px solid var(--grid); }
+  .act { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); margin-bottom: 10px; }
+  section h2 { font-size: clamp(26px, 4vw, 38px); line-height: 1.2; margin-bottom: 14px; }
+  .lede { color: var(--ink-2); font-size: 17px; max-width: 700px; margin-bottom: 32px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 24px; margin: 20px 0;
+  }
+  .card h3 { font-size: 15px; font-weight: 650; margin-bottom: 4px; }
+  .card .sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .note { font-size: 13px; color: var(--muted); max-width: 700px; margin-top: 14px; }
+  .note b { color: var(--ink-2); font-weight: 600; }
+
+  /* controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 14px 0 6px; }
+  button {
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink);
+    background: #242423; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 16px; cursor: pointer;
+  }
+  button:hover { background: #2e2e2c; }
+  button.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  button.primary:hover { filter: brightness(1.1); }
+  input[type=range] { accent-color: var(--blue); width: 200px; }
+  .veloLabel { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--ink-2); min-width: 64px; }
+
+  /* big readouts */
+  .stats { display: flex; gap: 36px; flex-wrap: wrap; margin: 18px 0 6px; }
+  .stat .v { font-size: 44px; font-weight: 750; line-height: 1.05; }
+  .stat .l { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .stat .v.decide { color: var(--yellow); }
+
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+  /* legend chips */
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--ink-2); margin: 4px 0 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .chip { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  /* tooltip */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: #242423; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; color: var(--ink);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5); max-width: 260px;
+  }
+  #tip .t { color: var(--muted); font-size: 12px; }
+  #tip b { font-variant-numeric: tabular-nums; }
+
+  /* table view */
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin-top: 12px; }
+  th, td { text-align: right; padding: 7px 12px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  .tableWrap { display: none; overflow-x: auto; }
+  .tableWrap.open { display: block; }
+
+  /* reaction test */
+  #rxBox {
+    height: 210px; border-radius: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; cursor: pointer; user-select: none;
+    background: #242423; border: 1px solid var(--border); transition: background 0.1s;
+    text-align: center; padding: 20px;
+  }
+  #rxBox.armed { background: #3a2b13; }
+  #rxBox.go { background: #0e4d0e; }
+  #rxBox.dq { background: #4d1414; }
+  #rxBox .big { font-size: 30px; font-weight: 750; }
+  #rxBox .small { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+
+  footer { border-top: 1px solid var(--grid); padding: 48px 0 80px; color: var(--muted); font-size: 13.5px; }
+  footer h4 { color: var(--ink-2); font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; margin: 22px 0 8px; }
+  footer li { margin-left: 18px; margin-bottom: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<div id="tip"></div>
+
+<div class="hero wrap">
+  <div class="kicker">POC · for the “Time” video · real data</div>
+  <h1>Elite athletes don’t react faster.<br><span class="dim">They see the future.</span></h1>
+  <p>Three exhibits arguing that “time slows down” for great athletes because of <b>anticipation</b> —
+     built on 2023–24 MLB pitch tracking and Olympic start-block sensors.</p>
+</div>
+
+<!-- ================= ACT 1 ================= -->
+<section id="act1"><div class="wrap">
+  <div class="act">Exhibit 1 · The impossible deadline</div>
+  <h2>A fastball leaves you ~150 ms to decide.</h2>
+  <p class="lede">Light needs ~100 ms to travel from a hitter's retina to a cortical decision, and the swing
+  itself takes ~150 ms to execute. Both are fixed biology. Whatever is left in the middle is the
+  <b style="color:var(--yellow)">decision window</b> — and at elite velocity, it's a rounding error.
+  Reaction alone can't hit a fastball. Prediction can.</p>
+
+  <div class="card">
+    <h3>The flight of one pitch</h3>
+    <div class="sub">Flight time = league-average release extension at each velocity, 2023–24 four-seamers (<span id="nPitches">…</span> pitches). Drag the velocity.</div>
+    <div class="controls">
+      <span class="veloLabel"><b id="veloVal">95</b> mph</span>
+      <input type="range" id="velo" min="88" max="101" value="95" step="1" aria-label="pitch velocity">
+      <button class="primary" id="playReal">▶ Play at real speed</button>
+      <button id="playSlow">▶ Play at 1/10 speed</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v" id="flightMs">—</div><div class="l">ball flight, release → plate</div></div>
+      <div class="stat"><div class="v decide" id="decideMs">—</div><div class="l">left to make the decision</div></div>
+    </div>
+    <svg id="pitchScene" viewBox="0 0 920 300" role="img" aria-label="Animated pitch flight with a time budget bar showing see, decide, and swing phases"></svg>
+    <p class="note"><b>Read it like a camera:</b> by the time the ball is halfway home, the swing decision is already locked.
+    The only way to buy more time is to start the computation <i>before</i> release — reading grip, arm slot, release point.
+    That's anticipation, and it's why the best hitters describe the ball as "slow."</p>
+  </div>
+
+  <div class="card">
+    <h3>Same radar gun, different clocks</h3>
+    <div class="sub" id="extSub">Two real pitchers, both ~95 mph four-seamers (2024, min. 300 pitches) — but release extension moves the deadline.</div>
+    <div class="controls"><button class="primary" id="raceBtn">▶ Race them (1/10 speed)</button></div>
+    <svg id="raceScene" viewBox="0 0 920 190" role="img" aria-label="Two pitches at the same radar speed arriving at different times due to release extension"></svg>
+    <p class="note" id="extNote"></p>
+  </div>
+</div></section>
+
+<!-- ================= ACT 2 ================= -->
+<section id="act2"><div class="wrap">
+  <div class="act">Exhibit 2 · The aging experiment</div>
+  <h2>Velocity doesn’t beat reflexes. It beats anticipation.</h2>
+  <p class="lede">Raw reaction speed peaks in your early 20s. The cue library — anticipation — only grows.
+  So here's a natural experiment: if old hitters survive on prediction, they should hang with young hitters
+  on ordinary fastballs and fall apart exactly where prediction stops working — top-end velocity,
+  where the decision window collapses toward zero.</p>
+
+  <div class="card">
+    <h3>Whiff rate on four-seam fastballs, by hitter age × velocity</h3>
+    <div class="sub">Share of swings that miss · MLB 2023–24 · swings on four-seamers only</div>
+    <div class="legend" id="ageLegend"></div>
+    <svg id="ageChart" viewBox="0 0 920 430" role="img" aria-label="Line chart of whiff rate by velocity bucket for four hitter age bands"></svg>
+    <div class="controls"><button id="tableBtn">Table view</button></div>
+    <div class="tableWrap" id="ageTable"></div>
+    <p class="note" id="ageNote"></p>
+    <p class="note"><b>Honest caveats for the video:</b> cross-sectional, not longitudinal — hitters still playing at 34+
+    are survivors, which should make them look <i>better</i>, not worse; the fact that they still lose the top-velocity
+    comparison strengthens the point. Whiff rate on swings; four-seamers only; sample sizes in the tooltips.</p>
+  </div>
+</div></section>
+
+<!-- ================= ACT 3 ================= -->
+<section id="act3"><div class="wrap">
+  <div class="act">Exhibit 3 · The biological floor</div>
+  <h2>Raw reaction hit a wall. Anticipation is the only door left.</h2>
+  <p class="lede">World Athletics disqualifies any start under 100 ms on the grounds that no human can
+  <i>react</i> that fast — it must have been a guess. The fastest humans alive, wired to force plates in the
+  blocks, cluster at 0.11–0.18 s and haven't gotten faster in decades. Everything that separates elite from
+  ordinary happens <i>before</i> the stimulus. (Noah Lyles had the slowest reaction in the Paris final. He won it.)</p>
+
+  <div class="card">
+    <h3>Every reaction time from the last two Olympic 100 m finals</h3>
+    <div class="sub">Force-plate reaction times, men's finals · hover the dots</div>
+    <div class="legend">
+      <span><span class="chip" style="background:var(--blue)"></span>Paris 2024</span>
+      <span><span class="chip" style="background:var(--aqua)"></span>Tokyo 2020</span>
+      <span><span class="chip" style="background:var(--magenta)"></span>You (take the test below)</span>
+    </div>
+    <svg id="rxChart" viewBox="0 0 920 260" role="img" aria-label="Dot plot of Olympic sprinter reaction times with the sub-100 millisecond false start zone marked"></svg>
+    <div class="controls"><button id="rxTableBtn">Table view</button></div>
+    <div class="tableWrap" id="rxTable"></div>
+    <p class="note"><b>The floor:</b> nobody in two Olympic finals broke 0.108 s. And Tokyo's final even had a casualty of the
+    rule — Zharnel Hughes, disqualified on the start line. When raw reaction is capped by the speed of your own nervous
+    system, the only remaining edge is upstream: reading the starter's cadence, the pitcher's grip, the point guard's eyes.</p>
+  </div>
+
+  <div class="card">
+    <h3>Your turn — where do you land?</h3>
+    <div class="sub">Click the box, wait for green, click again as fast as you can. Median human on this kind of test: ~273 ms.</div>
+    <div id="rxBox"><div class="big">Click to start</div><div class="small">…then wait for green. Jump early and you're DQ'd.</div></div>
+    <p class="note" id="rxResult"></p>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p><b style="color:var(--ink-2)">Where this goes in the video:</b> Exhibit 1 sets the impossible deadline, Exhibit 2 proves the
+  edge is learned prediction (not youth), Exhibit 3 shows biology already maxed out reaction — so the “time slows down” feeling
+  is a prediction engine running ahead of the present. Bridges cleanly to the memory-density half (Eagleman's falling
+  experiment: time doesn't slow live, it slows in the recording).</p>
+  <h4>Sources & method</h4>
+  <ul>
+    <li>Pitch data: Baseball Savant / Statcast, 2023–24 regular seasons, four-seam fastballs. Flight time computed as (60.5 ft − release extension) ÷ average ball velocity, with the ball assumed to lose ~9.5% of release speed by the plate.</li>
+    <li>Visual latency (~100 ms to conscious visual processing) and bat swing execution (~150 ms) are standard sports-science figures used for illustration; exact values vary by player and study.</li>
+    <li>Whiff = swinging strike ÷ swings; hitter age = seasonal age (June 30). Sample sizes shown in tooltips and table view.</li>
+    <li>Reaction times: official World Athletics results — <a href="https://worldathletics.org/competitions/olympic-games/the-xxxiii-olympic-games-7153115/results/men/100-metres/final/result">Paris 2024 final</a>, <a href="https://worldathletics.org/competitions/olympic-games/the-xxxii-olympic-games-7132391/results/men/100-metres/final/result">Tokyo 2020 final</a>. False-start rule: World Athletics TR16.7 (reaction &lt; 100 ms).</li>
+    <li>~273 ms median human click reaction: Human Benchmark aggregate data (visual stimulus + mouse click, so includes device latency; the Olympic figures are force-plate measurements — different instruments, same order of magnitude).</li>
+  </ul>
+  <p style="margin-top:22px">POC built by Nick · charts are draft-quality on purpose — every number is real and reproducible.</p>
+</div></footer>
+
+<script src="data.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const svgNS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => {
+  const n = document.createElementNS(svgNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const fmt = (x, d=0) => x.toLocaleString('en-US', {maximumFractionDigits: d, minimumFractionDigits: d});
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const DATA = window.POC_DATA;
+const SEE_MS = 100, SWING_MS = 150;
+
+// tooltip helpers
+const tip = $('#tip');
+function showTip(html, x, y) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(innerWidth - w - 8, x + pad) + 'px';
+  tip.style.top  = Math.max(8, y - h - pad) + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+
+/* ============ ACT 1: pitch scene ============ */
+const flightByVelo = {};
+DATA.flight.forEach(r => flightByVelo[r.velo_bin] = r);
+$('#nPitches').textContent = fmt(DATA.meta.pitches);
+
+const PS = { x0: 70, x1: 850, ballY: 96, barY: 190, barH: 34 };
+const scene = $('#pitchScene');
+
+function buildScene() {
+  scene.innerHTML = '';
+  // ground line
+  el('line', {x1: 20, y1: 140, x2: 900, y2: 140, stroke: 'var(--baseline)', 'stroke-width': 1}, scene);
+  // release + plate markers
+  el('line', {x1: PS.x0, y1: 60, x2: PS.x0, y2: 140, stroke: 'var(--grid)', 'stroke-width': 1}, scene);
+  el('line', {x1: PS.x1, y1: 60, x2: PS.x1, y2: 140, stroke: 'var(--grid)', 'stroke-width': 1}, scene);
+  const t1 = el('text', {x: PS.x0, y: 162, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle'}, scene);
+  t1.textContent = 'release';
+  const t2 = el('text', {x: PS.x1, y: 162, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle'}, scene);
+  t2.textContent = 'plate';
+  scene._ball = el('circle', {cx: PS.x0, cy: PS.ballY, r: 7, fill: 'var(--ink)'}, scene);
+  scene._barG = el('g', {}, scene);
+  scene._head = el('line', {x1: PS.x0, y1: PS.barY - 8, x2: PS.x0, y2: PS.barY + PS.barH + 8, stroke: 'var(--ink)', 'stroke-width': 2, opacity: 0}, scene);
+}
+buildScene();
+
+let flight = 400;
+function layoutBar(f) {
+  const g = scene._barG; g.innerHTML = '';
+  const W = PS.x1 - PS.x0, msPx = W / f;
+  const decide = Math.max(0, f - SEE_MS - SWING_MS);
+  const seg = (ms0, ms1, color, label) => {
+    const x = PS.x0 + ms0 * msPx, w = Math.max(0, (ms1 - ms0) * msPx - 2);
+    el('rect', {x, y: PS.barY, width: w, height: PS.barH, rx: 4, fill: color}, g);
+    const t = el('text', {x: x + w/2, y: PS.barY + PS.barH + 22, fill: 'var(--ink-2)', 'font-size': 12.5, 'text-anchor': 'middle'}, g);
+    t.textContent = label;
+    const ms = el('text', {x: x + w/2, y: PS.barY + PS.barH + 40, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle'}, g);
+    ms.textContent = fmt(ms1 - ms0) + ' ms';
+  };
+  seg(0, SEE_MS, '#6da7ec', 'SEE');
+  seg(SEE_MS, SEE_MS + decide, 'var(--yellow)', 'DECIDE');
+  seg(SEE_MS + decide, f, 'var(--violet)', 'SWING');
+  const cap = el('text', {x: PS.x0, y: PS.barY - 12, fill: 'var(--muted)', 'font-size': 12}, g);
+  cap.textContent = 'the same ' + fmt(f) + ' ms as a time budget:';
+}
+function setVelo(v) {
+  const r = flightByVelo[v];
+  flight = r ? r.flight_ms : (60.5 - 6.5) / (v * 1.46667 * 0.9525) * 1000;
+  $('#veloVal').textContent = v;
+  $('#flightMs').textContent = fmt(flight) + ' ms';
+  $('#decideMs').textContent = fmt(Math.max(0, flight - SEE_MS - SWING_MS)) + ' ms';
+  layoutBar(flight);
+}
+$('#velo').addEventListener('input', e => setVelo(+e.target.value));
+
+let animId = null;
+function playPitch(slow) {
+  cancelAnimationFrame(animId);
+  const dur = flight * (slow ? 10 : 1);
+  const start = performance.now();
+  scene._head.setAttribute('opacity', 1);
+  const step = now => {
+    const p = Math.min(1, (now - start) / dur);
+    const x = PS.x0 + (PS.x1 - PS.x0) * p;
+    scene._ball.setAttribute('cx', x);
+    scene._ball.setAttribute('cy', PS.ballY + 24 * p * p); // slight drop
+    scene._head.setAttribute('x1', x); scene._head.setAttribute('x2', x);
+    if (p < 1) animId = requestAnimationFrame(step);
+    else setTimeout(() => scene._head.setAttribute('opacity', 0), 600);
+  };
+  animId = requestAnimationFrame(step);
+}
+$('#playReal').addEventListener('click', () => playPitch(false));
+$('#playSlow').addEventListener('click', () => playPitch(true));
+setVelo(95);
+
+/* ============ ACT 1b: extension race ============ */
+const EXT = DATA.extension;
+const race = $('#raceScene');
+const RL = { x0: 180, x1: 850, rows: [58, 128] };
+function lastName(n) { return n.split(',')[0].trim(); }
+function buildRace() {
+  race.innerHTML = '';
+  const both = [EXT.long, EXT.short];
+  $('#extSub').textContent = `Two real pitchers, both ~95 mph four-seamers (2024, min. 300 pitches): ` +
+    `${lastName(EXT.long.name)} releases ${EXT.long.ext.toFixed(1)} ft from the rubber, ${lastName(EXT.short.name)} ${EXT.short.ext.toFixed(1)} ft.`;
+  $('#extNote').innerHTML = `<b>${lastName(EXT.long.name)}'s</b> ball arrives in <b>${fmt(EXT.long.flight_ms)} ms</b> vs ` +
+    `<b>${fmt(EXT.short.flight_ms)} ms</b> for <b>${lastName(EXT.short.name)}</b> — <b>${fmt(EXT.short.flight_ms - EXT.long.flight_ms)} ms stolen</b> ` +
+    `at the same radar reading. That's why Statcast credits ${lastName(EXT.long.name)} with a higher "effective" velocity ` +
+    `(${EXT.long.eff.toFixed(1)} vs ${EXT.short.eff.toFixed(1)} mph). Extension is legal time theft.`;
+  both.forEach((p, i) => {
+    const y = RL.rows[i];
+    const nm = el('text', {x: 12, y: y + 4, fill: 'var(--ink-2)', 'font-size': 13.5, 'font-weight': 600}, race);
+    nm.textContent = lastName(p.name);
+    const d = el('text', {x: 12, y: y + 21, fill: 'var(--muted)', 'font-size': 11.5}, race);
+    d.textContent = p.ext.toFixed(1) + ' ft ext · ' + p.velo.toFixed(1) + ' mph';
+    el('line', {x1: RL.x0, y1: y, x2: RL.x1, y2: y, stroke: 'var(--grid)', 'stroke-width': 1}, race);
+    p._ball = el('circle', {cx: RL.x0, cy: y, r: 7, fill: i === 0 ? 'var(--blue)' : 'var(--ink)'}, race);
+    p._lbl = el('text', {x: RL.x1 + 0, y: y - 14, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'end', opacity: 0}, race);
+  });
+  el('line', {x1: RL.x1, y1: 30, x2: RL.x1, y2: 156, stroke: 'var(--grid)', 'stroke-width': 1}, race);
+  const t = el('text', {x: RL.x1, y: 176, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle'}, race);
+  t.textContent = 'plate';
+}
+buildRace();
+$('#raceBtn').addEventListener('click', () => {
+  const SLOW = 10, start = performance.now();
+  const both = [EXT.long, EXT.short];
+  both.forEach(p => { p._lbl.setAttribute('opacity', 0); });
+  const maxT = Math.max(EXT.long.flight_ms, EXT.short.flight_ms) * SLOW;
+  const step = now => {
+    const t = (now - start) / SLOW; // "real" ms elapsed
+    let done = 0;
+    both.forEach(p => {
+      const frac = Math.min(1, t / p.flight_ms);
+      p._ball.setAttribute('cx', RL.x0 + (RL.x1 - RL.x0) * frac);
+      if (frac >= 1) {
+        done++;
+        p._lbl.textContent = fmt(p.flight_ms) + ' ms';
+        p._lbl.setAttribute('opacity', 1);
+      }
+    });
+    if (done < 2) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+});
+
+/* ============ ACT 2: age x velo chart ============ */
+const AGE_COLORS = ['var(--age-1)', 'var(--age-2)', 'var(--age-3)', 'var(--age-4)'];
+const AGE_HEX = ['#b7d3f6', '#6da7ec', '#2a78d6', '#184f95'];
+const chart = $('#ageChart');
+const CH = { l: 64, r: 110, t: 24, b: 56, W: 920, H: 430 };
+
+function buildAgeChart() {
+  chart.innerHTML = '';
+  const bands = DATA.whiff, buckets = bands[0].points.map(p => p.velo);
+  const iw = CH.W - CH.l - CH.r, ih = CH.H - CH.t - CH.b;
+  const maxRate = Math.max(...bands.flatMap(b => b.points.map(p => p.rate || 0))) * 1.15;
+  const x = i => CH.l + iw * (i / (buckets.length - 1));
+  const y = r => CH.t + ih * (1 - r / maxRate);
+
+  // grid + axes (ticks on round 5% steps)
+  const tickStep = maxRate > 0.30 ? 0.10 : 0.05;
+  for (let r = 0; r <= maxRate + 1e-9; r += tickStep) {
+    const yy = y(r);
+    el('line', {x1: CH.l, y1: yy, x2: CH.W - CH.r, y2: yy, stroke: 'var(--grid)', 'stroke-width': 1}, chart);
+    const t = el('text', {x: CH.l - 10, y: yy + 4, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'end', 'font-variant-numeric': 'tabular-nums'}, chart);
+    t.textContent = Math.round(r * 100) + '%';
+  }
+  buckets.forEach((b, i) => {
+    const t = el('text', {x: x(i), y: CH.H - CH.b + 24, fill: 'var(--muted)', 'font-size': 12.5, 'text-anchor': 'middle'}, chart);
+    t.textContent = b;
+  });
+  const xl = el('text', {x: CH.l + iw/2, y: CH.H - 8, fill: 'var(--muted)', 'font-size': 12.5, 'text-anchor': 'middle'}, chart);
+  xl.textContent = 'four-seam velocity (mph)';
+  const ylt = el('text', {x: 14, y: CH.t - 6, fill: 'var(--muted)', 'font-size': 12.5}, chart);
+  ylt.textContent = 'whiff rate';
+
+  // legend
+  $('#ageLegend').innerHTML = bands.map((b, i) =>
+    `<span><span class="chip" style="background:${AGE_HEX[i]}"></span>${b.band === '34+' ? 'age 34+' : 'age ' + b.band}</span>`).join('');
+
+  // lines + points
+  bands.forEach((b, bi) => {
+    const pts = b.points.map((p, i) => [x(i), y(p.rate)]);
+    const dAttr = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
+    const path = el('path', {d: dAttr, fill: 'none', stroke: AGE_COLORS[bi], 'stroke-width': 2.5, 'stroke-linecap': 'round'}, chart);
+    if (!reduceMotion) {
+      const len = path.getTotalLength();
+      path.style.strokeDasharray = len; path.style.strokeDashoffset = len;
+      path.style.transition = 'stroke-dashoffset 1.1s ease ' + (bi * 0.18) + 's';
+      chart._paths = chart._paths || []; chart._paths.push(path);
+    }
+    pts.forEach((p, i) => {
+      el('circle', {cx: p[0], cy: p[1], r: 4.5, fill: AGE_COLORS[bi], stroke: 'var(--surface)', 'stroke-width': 2}, chart);
+    });
+    b._endY = pts[pts.length - 1][1];
+    b._endX = pts[pts.length - 1][0];
+  });
+
+  // direct labels at line ends, de-overlapped (min 17px apart)
+  const order = bands.map((b, i) => ({b, i})).sort((a, c) => a.b._endY - c.b._endY);
+  let prevY = -Infinity;
+  order.forEach(({b, i}) => {
+    const ly = Math.max(b._endY + 4, prevY + 17);
+    prevY = ly;
+    const lbl = el('text', {x: b._endX + 14, y: ly, fill: AGE_COLORS[i], 'font-size': 13, 'font-weight': 650}, chart);
+    lbl.textContent = 'age ' + b.band;
+  });
+
+  // hover columns (crosshair + tooltip)
+  const hoverLine = el('line', {y1: CH.t, y2: CH.H - CH.b, stroke: 'var(--baseline)', 'stroke-width': 1, opacity: 0}, chart);
+  buckets.forEach((bk, i) => {
+    const hit = el('rect', {x: x(i) - iw / (buckets.length - 1) / 2, y: CH.t, width: iw / (buckets.length - 1), height: ih, fill: 'transparent'}, chart);
+    hit.addEventListener('mousemove', ev => {
+      hoverLine.setAttribute('x1', x(i)); hoverLine.setAttribute('x2', x(i));
+      hoverLine.setAttribute('opacity', 1);
+      const rows = bands.map((b, bi) => {
+        const p = b.points[i];
+        return `<div><span class="chip" style="background:${AGE_HEX[bi]};width:9px;height:9px;display:inline-block;border-radius:2px;margin-right:6px"></span>` +
+               `${b.band}: <b>${(p.rate * 100).toFixed(1)}%</b> <span class="t">(${fmt(p.swings)} swings)</span></div>`;
+      }).join('');
+      showTip(`<div class="t">${bk} mph four-seamers</div>${rows}`, ev.clientX, ev.clientY);
+    });
+    hit.addEventListener('mouseleave', () => { hoverLine.setAttribute('opacity', 0); hideTip(); });
+  });
+
+  // dynamic takeaway
+  const young = bands[0], old = bands[bands.length - 1];
+  const gapLow = (old.points[0].rate - young.points[0].rate) * 100;
+  const gapHigh = (old.points[old.points.length - 1].rate - young.points[young.points.length - 1].rate) * 100;
+  $('#ageNote').innerHTML = `<b>The tell:</b> below 92 mph the 34+ hitters whiff ${gapLow <= 0 ? 'no more — actually ' + Math.abs(gapLow).toFixed(1) + ' pts <i>less</i> —' : 'only ' + gapLow.toFixed(1) + ' pts more'} than hitters in their early 20s: three decades of cue-reading cancels the reflex gap. At 98+, where the decision window collapses and prediction runs out of road, the gap ${gapHigh > gapLow ? 'blows open to ' + gapHigh.toFixed(1) + ' points' : 'moves to ' + gapHigh.toFixed(1) + ' points'}. Velocity doesn't beat their eyes — it beats their forecast.`;
+
+  // table view
+  const head = '<tr><th>Age band</th>' + buckets.map(b => `<th>${b} mph</th>`).join('') + '</tr>';
+  const rows = bands.map(b => '<tr><td>' + b.band + '</td>' +
+    b.points.map(p => `<td>${(p.rate * 100).toFixed(1)}% <span style="color:var(--muted)">(${fmt(p.swings)})</span></td>`).join('') + '</tr>').join('');
+  $('#ageTable').innerHTML = '<table><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>' +
+    '<p class="note">Cell = whiff rate (swings in parentheses).</p>';
+}
+buildAgeChart();
+$('#tableBtn').addEventListener('click', () => {
+  const w = $('#ageTable'); w.classList.toggle('open');
+  $('#tableBtn').textContent = w.classList.contains('open') ? 'Hide table' : 'Table view';
+});
+// draw-in on scroll
+if (!reduceMotion && chart._paths) {
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) { chart._paths.forEach(p => p.style.strokeDashoffset = 0); io.disconnect(); } });
+  }, {threshold: 0.35});
+  io.observe(chart);
+}
+
+/* ============ ACT 3: reaction floor ============ */
+const RX = [
+  {g: 'Paris 2024', n: 'Noah Lyles', rt: 0.178, fin: '9.79 · gold'},
+  {g: 'Paris 2024', n: 'Kishane Thompson', rt: 0.176, fin: '9.79 · silver'},
+  {g: 'Paris 2024', n: 'Fred Kerley', rt: 0.108, fin: '9.81 · bronze'},
+  {g: 'Paris 2024', n: 'Akani Simbine', rt: 0.149, fin: '9.82 · 4th'},
+  {g: 'Paris 2024', n: 'Marcell Jacobs', rt: 0.114, fin: '9.85 · 5th'},
+  {g: 'Paris 2024', n: 'Letsile Tebogo', rt: 0.178, fin: '9.86 · 6th'},
+  {g: 'Paris 2024', n: 'Kenneth Bednarek', rt: 0.163, fin: '9.88 · 7th'},
+  {g: 'Paris 2024', n: 'Oblique Seville', rt: 0.171, fin: '9.91 · 8th'},
+  {g: 'Tokyo 2020', n: 'Marcell Jacobs', rt: 0.161, fin: '9.80 · gold'},
+  {g: 'Tokyo 2020', n: 'Fred Kerley', rt: 0.128, fin: '9.84 · silver'},
+  {g: 'Tokyo 2020', n: 'Andre De Grasse', rt: 0.155, fin: '9.89 · bronze'},
+  {g: 'Tokyo 2020', n: 'Akani Simbine', rt: 0.141, fin: '9.93 · 4th'},
+  {g: 'Tokyo 2020', n: 'Ronnie Baker', rt: 0.148, fin: '9.95 · 5th'},
+  {g: 'Tokyo 2020', n: 'Su Bingtian', rt: 0.167, fin: '9.98 · 6th'},
+  {g: 'Tokyo 2020', n: 'Enoch Adegoke', rt: 0.157, fin: 'DNF'},
+];
+const rxChart = $('#rxChart');
+const RC = { l: 110, r: 40, t: 34, b: 54, W: 920, H: 260, min: 0.06, max: 0.30 };
+let youDot = null;
+function rxX(v) { return RC.l + (RC.W - RC.l - RC.r) * (v - RC.min) / (RC.max - RC.min); }
+function buildRxChart() {
+  rxChart.innerHTML = '';
+  // false-start zone
+  const zx = rxX(0.100);
+  el('rect', {x: RC.l, y: RC.t, width: zx - RC.l, height: RC.H - RC.t - RC.b, fill: 'rgba(208,59,59,0.14)'}, rxChart);
+  el('line', {x1: zx, y1: RC.t, x2: zx, y2: RC.H - RC.b, stroke: 'var(--critical)', 'stroke-width': 1.5}, rxChart);
+  const zt = el('text', {x: zx + 6, y: RC.t - 12, fill: 'var(--critical)', 'font-size': 12.5, 'text-anchor': 'start', 'font-weight': 650}, rxChart);
+  zt.textContent = '✕ FALSE START — under 100 ms = "not humanly possible"';
+
+  // axis
+  for (let v = 0.10; v <= RC.max + 1e-9; v += 0.05) {
+    const xx = rxX(v);
+    el('line', {x1: xx, y1: RC.H - RC.b, x2: xx, y2: RC.H - RC.b + 6, stroke: 'var(--baseline)', 'stroke-width': 1}, rxChart);
+    const t = el('text', {x: xx, y: RC.H - RC.b + 24, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle', 'font-variant-numeric': 'tabular-nums'}, rxChart);
+    t.textContent = Math.round(v * 1000) + ' ms';
+  }
+  el('line', {x1: RC.l, y1: RC.H - RC.b, x2: RC.W - RC.r, y2: RC.H - RC.b, stroke: 'var(--baseline)', 'stroke-width': 1}, rxChart);
+
+  // median-human marker
+  const mh = rxX(0.273);
+  el('line', {x1: mh, y1: RC.t + 6, x2: mh, y2: RC.H - RC.b, stroke: 'var(--baseline)', 'stroke-width': 1.5}, rxChart);
+  const mt = el('text', {x: mh, y: RC.t + 0, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle'}, rxChart);
+  mt.textContent = 'median human ~273 ms';
+
+  // rows
+  const rows = {'Paris 2024': RC.t + 52, 'Tokyo 2020': RC.t + 112};
+  const colors = {'Paris 2024': 'var(--blue)', 'Tokyo 2020': 'var(--aqua)'};
+  for (const g in rows) {
+    const t = el('text', {x: 12, y: rows[g] + 4, fill: 'var(--ink-2)', 'font-size': 13}, rxChart);
+    t.textContent = g;
+    el('line', {x1: RC.l, y1: rows[g], x2: RC.W - RC.r, y2: rows[g], stroke: 'var(--grid)', 'stroke-width': 1}, rxChart);
+  }
+  RX.forEach(d => {
+    const c = el('circle', {cx: rxX(d.rt), cy: rows[d.g], r: 6, fill: colors[d.g], stroke: 'var(--surface)', 'stroke-width': 2}, rxChart);
+    const hit = el('circle', {cx: rxX(d.rt), cy: rows[d.g], r: 13, fill: 'transparent'}, rxChart);
+    hit.style.cursor = 'pointer';
+    hit.addEventListener('mousemove', ev =>
+      showTip(`<b>${d.n}</b><div class="t">${d.g}</div>reaction <b>${Math.round(d.rt * 1000)} ms</b> · ${d.fin}`, ev.clientX, ev.clientY));
+    hit.addEventListener('mouseleave', hideTip);
+  });
+  rxChart._youRow = RC.t + 172;
+  const yt = el('text', {x: 12, y: rxChart._youRow + 4, fill: 'var(--ink-2)', 'font-size': 13}, rxChart);
+  yt.textContent = 'You';
+  el('line', {x1: RC.l, y1: rxChart._youRow, x2: RC.W - RC.r, y2: rxChart._youRow, stroke: 'var(--grid)', 'stroke-width': 1}, rxChart);
+}
+buildRxChart();
+function plotYou(ms) {
+  const v = Math.min(RC.max, ms / 1000);
+  if (youDot) youDot.remove();
+  youDot = el('circle', {cx: rxX(v), cy: rxChart._youRow, r: 7, fill: 'var(--magenta)', stroke: 'var(--surface)', 'stroke-width': 2}, rxChart);
+}
+// table
+$('#rxTable').innerHTML = '<table><thead><tr><th>Athlete</th><th>Final</th><th>Reaction (ms)</th><th>Result</th></tr></thead><tbody>' +
+  RX.map(d => `<tr><td>${d.n}</td><td>${d.g}</td><td>${Math.round(d.rt * 1000)}</td><td>${d.fin}</td></tr>`).join('') +
+  '</tbody></table>';
+$('#rxTableBtn').addEventListener('click', () => {
+  const w = $('#rxTable'); w.classList.toggle('open');
+  $('#rxTableBtn').textContent = w.classList.contains('open') ? 'Hide table' : 'Table view';
+});
+
+/* ============ ACT 3b: reaction test ============ */
+const box = $('#rxBox');
+let rxState = 'idle', rxTimer = null, goTime = 0;
+function rxSet(cls, big, small) {
+  box.className = cls;
+  box.innerHTML = `<div class="big">${big}</div><div class="small">${small}</div>`;
+}
+box.addEventListener('pointerdown', () => {
+  if (rxState === 'idle' || rxState === 'done' || rxState === 'dq') {
+    rxState = 'armed';
+    rxSet('armed', 'Wait for green…', 'fingers on the blocks');
+    rxTimer = setTimeout(() => {
+      rxState = 'go'; goTime = performance.now();
+      rxSet('go', 'GO', 'click!');
+    }, 1500 + Math.random() * 2500);
+  } else if (rxState === 'armed') {
+    clearTimeout(rxTimer); rxState = 'dq';
+    rxSet('dq', 'FALSE START', 'You jumped the gun — disqualified. Click to try again.');
+    $('#rxResult').innerHTML = '<b>DQ.</b> That\'s exactly what the &lt;100 ms rule is for: you didn\'t react, you predicted — badly. Elite starters predict <i>well</i>.';
+  } else if (rxState === 'go') {
+    const ms = Math.round(performance.now() - goTime);
+    rxState = 'done';
+    const vs = ms - 108;
+    rxSet('', ms + ' ms', 'click to try again');
+    plotYou(ms);
+    const feet = vs > 0 ? ` In the time between his reaction and yours, a 95&nbsp;mph fastball travels ~${fmt(vs * 0.139, 1)} feet.` : '';
+    $('#rxResult').innerHTML = `<b>${ms} ms.</b> Fred Kerley's Paris start was <b>108 ms</b> — ${vs > 0 ? '<b>' + vs + ' ms</b> ahead of you' : 'somehow you beat him — sensor lag is flattering you'}.${feet} (Your number includes screen + mouse latency; his came off a force plate. The gap is still real.)`;
+  }
+});
+</script>
+</body>
+</html>
