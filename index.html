@@ -117,6 +117,12 @@
   #rxBox .small { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
 
 
+  /* commit-window diagram (embedded) */
+  .controls button.on { background: var(--blue); border-color: var(--blue); }
+  .dots { display: inline-flex; gap: 7px; align-items: center; margin-left: 6px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--grid); }
+  .dots i.on { background: var(--ink); }
+
   /* jump-the-move game */
   .gbox { height: 230px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #242423; border: 1px solid var(--border); cursor: pointer; user-select: none; margin-bottom: 16px; transition: background 0.1s; }
   .gbox .big { font-size: 34px; font-weight: 750; }
@@ -253,14 +259,38 @@
   <p class="lede">The defense runs the same download → commit → react loop as the offense, and both sides
   play a second game on top: <b>maximize the information you gather, minimize the information you reveal.</b>
   The offense's weapon is possibility — and there's a century-old law of psychology that prices it.
-  <b>Hick's law:</b> reaction time grows with every option you're forced to hold live. Don't take our word
-  for it. Get in a stance.</p>
+  <b>Hick's law:</b> reaction time grows with every option you're forced to hold live. First the map, then
+  the territory: step through the duel below, then get in a stance and defend it yourself.</p>
+
+  <div class="card">
+    <h3>The commit window — the map</h3>
+    <div class="sub">Michael's sketch, formalized: both players on one clock. Step through the six beats —
+    beat 3 morphs the offense from average to elite and the defense's window collapses.</div>
+    <div class="controls">
+      <button id="cwPrev">← Prev</button>
+      <button class="primary" id="cwNext">Next beat →</button>
+      <button id="cwAvg" class="on">Average player</button>
+      <button id="cwElite">Elite player</button>
+      <span class="dots" id="cwDots"></span>
+    </div>
+    <svg id="cwScene" viewBox="0 0 1600 900" role="img"
+      aria-label="Diagram of offense and defense timelines: anticipation, commit, possibility, and the defense's shrinking window of certainty"></svg>
+    <div style="text-align:center; margin-top:16px; min-height:96px">
+      <b id="cwCapH" style="font-size:17px"></b>
+      <p class="note" id="cwCapP" style="max-width:740px; margin:6px auto 0"></p>
+    </div>
+    <p class="note" style="margin-top:12px"><b>Making the video?</b> The
+    <a href="duel.html">full-screen version</a> is built for screen-recording — arrow keys step the beats,
+    M toggles average/elite, H hides the chrome.</p>
+  </div>
 
   <div class="card">
     <h3>Jump the move</h3>
-    <div class="sub">When he commits, hit the matching direction — tap a button or use your arrow keys — before
-    the play arrives (<b>600 ms</b>). Three stages: first he has <b>one</b> move, then <b>two</b>, then
-    <b>all four</b>. Four reps each. Jump before the commit and you've bitten on a fake.</div>
+    <div class="sub">Now you're the defender in the diagram above, guarding the same four decisions from the
+    fan — <b>drive left · pull-up · drive right · pass</b>. When he commits, hit the matching direction (tap a
+    button or use your arrow keys) before the play arrives (<b>600 ms</b>). Three stages: first he has <b>one</b>
+    move live, then <b>two</b>, then <b>all four</b>. Four reps each. Jump before the commit and you've bitten
+    on a fake.</div>
     <div class="gbox" id="gBox"><div class="big">Ready to guard?</div><div class="small">click here to start · stage 1 of 3</div></div>
     <div class="gpad" id="gPad"></div>
     <p class="note" id="gMsg"><b>Stage 1 is pure reaction</b> — you know exactly what's coming, you just don't
@@ -289,10 +319,6 @@
   <p class="note" style="margin-top:8px">Absolute times include your screen and input latency, so compare stages
   to each other, not to the Olympians above. Hick–Hyman: RT = a + b·log₂(N+1); slope b runs ~100–150 ms per bit
   for the unpracticed. Elite athletes drill the slope flatter — practice is another way of buying time.</p>
-  <p class="note" style="margin-top:8px"><b>Making the video?</b> There's a <a href="duel.html">clean, narratable
-  diagram version of this idea</a> — a 16:9 stage that steps through the four beats (anticipation → the defense's
-  mirror → possibility collapsing the window → the window repeating), with an average ↔ elite toggle that morphs
-  the whole geometry. Press H on it to hide the controls for screen-recording.</p>
 </div></section>
 
 <footer><div class="wrap">
@@ -314,6 +340,7 @@
 </div></footer>
 
 <script src="data.js"></script>
+<script src="commitwindow.js"></script>
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
@@ -654,6 +681,21 @@ $('#rxTable').innerHTML = '<table><thead><tr><th>Athlete</th><th>Final</th><th>R
 $('#rxTableBtn').addEventListener('click', () => {
   const w = $('#rxTable'); w.classList.toggle('open');
   $('#rxTableBtn').textContent = w.classList.contains('open') ? 'Hide table' : 'Table view';
+});
+
+/* ============ ACT 4a: embedded commit-window diagram ============ */
+initCommitWindow({
+  svg: $('#cwScene'),
+  capH: $('#cwCapH'),
+  capP: $('#cwCapP'),
+  dots: $('#cwDots'),
+  prev: $('#cwPrev'),
+  next: $('#cwNext'),
+  avg: $('#cwAvg'),
+  elite: $('#cwElite'),
+  keyboard: false, // arrow keys belong to the game on this page
+  deepLink: false,
+  finalNote: 'Now get in a stance — the game below hands you those same four options to defend, and measures exactly what possibility costs you.',
 });
 
 /* ============ ACT 4: jump-the-move game ============ */
