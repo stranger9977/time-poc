@@ -8,4 +8,4 @@ Proof-of-concept exhibits for Michael's "Time" video: why time seems to slow dow
 
 Static site — `index.html` + `data.js` (generated from Baseball Savant pulls). No build step, no dependencies.
 
-4. **The duel (commit window)** — interactive model of Michael's sketch: offense and defense on one clock, both running download → commit → react. Sliders for commit timing, cue leakage, and live options; defense's decide cost follows Hick's law. Late commit + no leaks + live counters = the defense arrives after the play.
+4. **The duel (jump the move)** — playable version of Michael's commit-window sketch: you guard the offense with arrow keys/buttons across three stages (1, 2, then 4 live options), then the page plots your own reaction times on a log2(N+1) axis with a fitted Hick–Hyman line — your personal slope in ms per bit of uncertainty. Append `?hickdemo` to preview the results chart with synthetic reps.

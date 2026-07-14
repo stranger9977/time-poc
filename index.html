@@ -116,6 +116,22 @@
   #rxBox .big { font-size: 30px; font-weight: 750; }
   #rxBox .small { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
 
+
+  /* jump-the-move game */
+  .gbox { height: 230px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #242423; border: 1px solid var(--border); cursor: pointer; user-select: none; margin-bottom: 16px; transition: background 0.1s; }
+  .gbox .big { font-size: 34px; font-weight: 750; }
+  .gbox .big .sym { font-size: 64px; line-height: 1; }
+  .gbox .small { font-size: 14px; color: var(--ink-2); margin-top: 8px; }
+  .gbox.armed { background: #26261f; }
+  .gbox.commit { background: #123a5e; }
+  .gbox.good { background: #0e4d0e; }
+  .gbox.bad { background: #4d1414; }
+  .gbox.fake { background: #3a2b13; }
+  .gpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 440px; margin: 0 auto; }
+  .gpad button { opacity: .35; padding: 12px 8px; border-radius: 10px; }
+  .gpad button .sym { display: block; font-size: 24px; line-height: 1.15; }
+  .gpad button.live { opacity: 1; border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
+
   footer { border-top: 1px solid var(--grid); padding: 48px 0 80px; color: var(--muted); font-size: 13.5px; }
   footer h4 { color: var(--ink-2); font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; margin: 22px 0 8px; }
   footer li { margin-left: 18px; margin-bottom: 4px; }
@@ -132,7 +148,7 @@
   <div class="kicker">POC · for the “Time” video · real data</div>
   <h1>Elite athletes don’t react faster.<br><span class="dim">They see the future.</span></h1>
   <p>Four exhibits arguing that “time slows down” for great athletes because of <b>anticipation</b> —
-     built on 2023–24 MLB pitch tracking, Olympic start-block sensors, and a formalized version of
+     built on 2023–24 MLB pitch tracking, Olympic start-block sensors, and a playable version of
      Michael's commit-window sketch.</p>
 </div>
 
@@ -233,55 +249,52 @@
 <!-- ================= ACT 4 ================= -->
 <section id="act4"><div class="wrap">
   <div class="act">Exhibit 4 · The duel</div>
-  <h2>Anticipation is a poker game. Great players commit late and leak nothing.</h2>
-  <p class="lede">Everything so far treats the defender as a stopwatch. But the defense is running the
-  same download → commit → react loop, and both sides are playing a second game on top: <b>maximize the
-  information you gather, minimize the information you reveal.</b> The offense's weapon is possibility —
-  every live option they carry into the commit is one more branch the defense must be ready for. That's
-  not just a metaphor: <b>Hick's law</b> says reaction time grows with each additional option a defender
-  has to sort through. Disguise doesn't just hide the future. It slows the defender's clock.</p>
+  <h2>Now you're the defender. Good luck.</h2>
+  <p class="lede">The defense runs the same download → commit → react loop as the offense, and both sides
+  play a second game on top: <b>maximize the information you gather, minimize the information you reveal.</b>
+  The offense's weapon is possibility — and there's a century-old law of psychology that prices it.
+  <b>Hick's law:</b> reaction time grows with every option you're forced to hold live. Don't take our word
+  for it. Get in a stance.</p>
 
   <div class="card">
-    <h3>The commit window</h3>
-    <div class="sub">Both players on one clock. Drag the sliders — the verdict updates live. The play arrives at the deadline line no matter what.</div>
-    <div class="controls" style="gap:10px 28px">
-      <span style="font-size:14px;color:var(--ink-2)">when the offense commits
-        <input type="range" id="dCommit" min="250" max="600" value="300" step="10" style="vertical-align:middle;margin-left:8px">
-        <b class="veloLabel" id="dCommitV" style="display:inline-block"></b></span>
-      <span style="font-size:14px;color:var(--ink-2)">cues leaked before the commit
-        <input type="range" id="dLeak" min="0" max="200" value="150" step="10" style="vertical-align:middle;margin-left:8px">
-        <b class="veloLabel" id="dLeakV" style="display:inline-block"></b></span>
-      <span style="font-size:14px;color:var(--ink-2)">options still alive at the commit
-        <input type="range" id="dOpts" min="1" max="4" value="1" step="1" style="vertical-align:middle;margin-left:8px">
-        <b class="veloLabel" id="dOptsV" style="display:inline-block"></b></span>
-    </div>
-    <div class="controls">
-      <button id="presetRookie">Telegraphed rookie</button>
-      <button id="presetElite">Chris Paul mode</button>
-      <button class="primary" id="duelPlay">▶ Play (1/10 speed)</button>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="v" id="duelVerdict">—</div><div class="l" id="duelVerdictSub">defense's margin at the deadline</div></div>
-      <div class="stat"><div class="v" id="duelWindow">—</div><div class="l">defense's usable window (intent readable → deadline)</div></div>
-    </div>
-    <svg id="duelScene" viewBox="0 0 920 430" role="img" aria-label="Two timelines, offense above and defense below, showing read, commit, and react phases and whether the defense can respond before the play arrives"></svg>
-    <p class="note"><b>Reading it:</b> the defense's clock can't start until intent is readable — the offense's commit
-    minus whatever cues leaked early. From there the defense pays a <span style="color:var(--yellow)">decide</span> cost
-    that grows with every option still alive (Hick's law), then a fixed <span style="color:var(--violet)">close</span> cost
-    to actually move. Slide the commit later, seal the leaks, keep a counter alive — and the defense's window collapses
-    below biology, exactly like the 98 mph fastball in Exhibit 2. And after the commit, the fan re-opens: the window
-    repeats until the play is dead.</p>
-    <p class="note"><b>Model, not measurement:</b> illustrative parameters — 180 ms base reaction (Exhibit 3's floor plus
-    a choice premium), ~100 ms per bit of uncertainty (Hick–Hyman slope), 100 ms to close, deadline at 750 ms. The point
-    is the <i>structure</i>: elite offense shrinks the defense's certainty window on one side (late commit, no leaks) and
-    stretches the defense's required processing on the other (live options). Both moves buy time — or steal it.</p>
+    <h3>Jump the move</h3>
+    <div class="sub">When he commits, hit the matching direction — tap a button or use your arrow keys — before
+    the play arrives (<b>600 ms</b>). Three stages: first he has <b>one</b> move, then <b>two</b>, then
+    <b>all four</b>. Four reps each. Jump before the commit and you've bitten on a fake.</div>
+    <div class="gbox" id="gBox"><div class="big">Ready to guard?</div><div class="small">click here to start · stage 1 of 3</div></div>
+    <div class="gpad" id="gPad"></div>
+    <p class="note" id="gMsg"><b>Stage 1 is pure reaction</b> — you know exactly what's coming, you just don't
+    know when. That's the sprinter's start from Exhibit 3. Watch what happens to your own numbers as options
+    get added, even though your eyes and your finger never change.</p>
   </div>
+
+  <div class="card" id="hickCard" style="display:none">
+    <h3>Your own Hick's law curve</h3>
+    <div class="sub">Every rep where you went the right way, by options live at the commit · x-axis is log₂(options + 1), so Hick's law predicts a straight line</div>
+    <div class="legend">
+      <span><span class="chip" style="background:var(--blue)"></span>beat the play (&le; 600 ms)</span>
+      <span><span class="chip" style="background:var(--critical)"></span>right way, too late</span>
+      <span><span class="chip" style="background:var(--yellow)"></span>Hick–Hyman fit through your medians</span>
+    </div>
+    <svg id="hickChart" viewBox="0 0 920 420" role="img" aria-label="Your reaction times by number of live options, with a fitted Hick's law line"></svg>
+    <div class="controls"><button class="primary" id="gAgain">Run it back</button></div>
+    <p class="note" id="hickNote"></p>
+    <p class="note"><b>Why this matters on a court:</b> the defender's budget is the commit-to-arrival window —
+    roughly the 600 ms line above. Your stage-1 self probably lives inside it. Your stage-3 self might not.
+    Nothing about your body changed between stages; the offense added milliseconds to your clock by refusing to
+    tell the future. That's what "shifty" is. Chris Paul's counters aren't just moves — they're time, installed
+    in the defender's head. And the elite version of defense is refusing to pay full price: reading cues early
+    (Exhibit 2) to collapse four options back to one before the commit ever happens.</p>
+  </div>
+  <p class="note" style="margin-top:8px">Absolute times include your screen and input latency, so compare stages
+  to each other, not to the Olympians above. Hick–Hyman: RT = a + b·log₂(N+1); slope b runs ~100–150 ms per bit
+  for the unpracticed. Elite athletes drill the slope flatter — practice is another way of buying time.</p>
 </div></section>
 
 <footer><div class="wrap">
   <p><b style="color:var(--ink-2)">Where this goes in the video:</b> Exhibit 1 sets the impossible deadline, Exhibit 2 proves the
-  edge is learned prediction (not youth), Exhibit 3 shows biology already maxed out reaction, and Exhibit 4 closes the loop —
-  anticipation is adversarial, a duel over who reveals intent first, where possibility itself slows the opponent's clock.
+  edge is learned prediction (not youth), Exhibit 3 shows biology already maxed out reaction, and Exhibit 4 closes the loop by making
+  you play it — anticipation is adversarial, and every option the offense keeps alive measurably stretches the defender's clock.
   So the “time slows down” feeling is a prediction engine running ahead of the present. Bridges cleanly to the memory-density
   half (Eagleman's falling experiment: time doesn't slow live, it slows in the recording).</p>
   <h4>Sources & method</h4>
@@ -291,7 +304,7 @@
     <li>Whiff = swinging strike ÷ swings; hitter age = seasonal age (June 30). Sample sizes shown in tooltips and table view.</li>
     <li>Reaction times: official World Athletics results — <a href="https://worldathletics.org/competitions/olympic-games/the-xxxiii-olympic-games-7153115/results/men/100-metres/final/result">Paris 2024 final</a>, <a href="https://worldathletics.org/competitions/olympic-games/the-xxxii-olympic-games-7132391/results/men/100-metres/final/result">Tokyo 2020 final</a>. False-start rule: World Athletics TR16.7 (reaction &lt; 100 ms).</li>
     <li>~273 ms median human click reaction: Human Benchmark aggregate data (visual stimulus + mouse click, so includes device latency; the Olympic figures are force-plate measurements — different instruments, same order of magnitude).</li>
-    <li>Exhibit 4 is a conceptual model of Michael's commit-window sketch, not a measurement. The decide-cost curve is the Hick–Hyman law (choice reaction time grows ~linearly with the log of the number of alternatives); parameter values are illustrative.</li>
+    <li>Exhibit 4 measures your own choice reaction times in-browser (device latency included — compare stages to each other). The straight-line prediction is the Hick–Hyman law: RT = a + b·log₂(N+1), with slope b typically ~100–150 ms/bit untrained.</li>
   </ul>
   <p style="margin-top:22px">POC built by Nick · charts are draft-quality on purpose — every number is real and reproducible.</p>
 </div></footer>
@@ -639,149 +652,211 @@ $('#rxTableBtn').addEventListener('click', () => {
   $('#rxTableBtn').textContent = w.classList.contains('open') ? 'Hide table' : 'Table view';
 });
 
-/* ============ ACT 4: the commit window ============ */
-const duel = $('#duelScene');
-const DU = { l: 90, r: 40, W: 920, H: 430, tMax: 950, DEADLINE: 750, BASE: 180, BITMS: 100, CLOSE: 100,
-             yOff: 120, yDef: 300 };
-const dx = t => DU.l + (DU.W - DU.l - DU.r) * (t / DU.tMax);
-let duelAnim = null;
+/* ============ ACT 4: jump-the-move game ============ */
+const GAME = { stages: [1, 2, 4], reps: 4, deadline: 600 };
+const GDIRS = [
+  { key: 'ArrowLeft',  sym: '←', label: 'drive left',  col: 1, row: 2 },
+  { key: 'ArrowUp',    sym: '↑', label: 'pull-up',     col: 2, row: 1 },
+  { key: 'ArrowRight', sym: '→', label: 'drive right', col: 3, row: 2 },
+  { key: 'ArrowDown',  sym: '↓', label: 'pass',        col: 2, row: 3 },
+];
+const gPad = $('#gPad');
+GDIRS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.innerHTML = `<span class="sym">${d.sym}</span>${d.label}`;
+  b.style.gridColumn = d.col; b.style.gridRow = d.row;
+  b.setAttribute('aria-label', d.label);
+  b.addEventListener('pointerdown', e => { e.preventDefault(); gRespond(i); });
+  d.btn = b; gPad.appendChild(b);
+});
 
-function duelParams() {
-  const commit = +$('#dCommit').value;
-  const leak = Math.min(+$('#dLeak').value, commit);
-  const opts = +$('#dOpts').value;
-  const readable = commit - leak;
-  const decide = DU.BASE + DU.BITMS * Math.log2(opts + 1);
-  const finish = readable + decide + DU.CLOSE;
-  const margin = DU.DEADLINE - finish;
-  return { commit, leak, opts, readable, decide, finish, margin };
+let gState = 'idle', gStageI = 0, gRep = 0, gLive = [], gTarget = -1, gT0 = 0;
+let gWait = null, gLate = null, gResults = [];
+
+function gSet(cls, big, small) {
+  const b = $('#gBox');
+  b.className = 'gbox' + (cls ? ' ' + cls : '');
+  b.innerHTML = `<div class="big">${big}</div><div class="small">${small}</div>`;
 }
-
-function drawDuel(playheadT) {
-  const P = duelParams();
-  duel.innerHTML = '';
-  const seg = (x0, x1, y, color, label, sub) => {
-    const w = Math.max(0, dx(x1) - dx(x0) - 2);
-    el('rect', {x: dx(x0), y: y - 13, width: w, height: 26, rx: 4, fill: color,
-                opacity: playheadT !== undefined && playheadT < x0 ? 0.25 : 1}, duel);
-    if (w > 46) {
-      const t = el('text', {x: dx(x0) + w / 2, y: y + 4.5, fill: '#0d0d0d', 'font-size': 12, 'font-weight': 650, 'text-anchor': 'middle'}, duel);
-      t.textContent = label;
-    }
-    if (sub && w > sub.length * 6.2) {
-      const s = el('text', {x: dx(x0) + w / 2, y: y + 32, fill: 'var(--muted)', 'font-size': 11.5, 'text-anchor': 'middle'}, duel);
-      s.textContent = sub;
-    }
-  };
-
-  // time axis
-  for (let t = 0; t <= 900; t += 150) {
-    const tt = el('text', {x: dx(t), y: DU.H - 12, fill: 'var(--muted)', 'font-size': 11.5, 'text-anchor': 'middle', 'font-variant-numeric': 'tabular-nums'}, duel);
-    tt.textContent = t + ' ms';
-    el('line', {x1: dx(t), y1: 40, x2: dx(t), y2: DU.H - 32, stroke: 'var(--grid)', 'stroke-width': 1}, duel);
+function gShowLive() { GDIRS.forEach((d, i) => d.btn.classList.toggle('live', gLive.includes(i))); }
+function gClearLive() { GDIRS.forEach(d => d.btn.classList.remove('live')); }
+function pickLive(n) {
+  const idx = [0, 1, 2, 3];
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return idx.slice(0, n).sort();
+}
+function gStartRep() {
+  const n = GAME.stages[gStageI];
+  gLive = pickLive(n); gShowLive();
+  gState = 'armed';
+  gSet('armed', '· · ·', `stage ${gStageI + 1} · rep ${gRep + 1}/${GAME.reps} — live: ${gLive.map(i => GDIRS[i].label).join(' · ')}`);
+  gWait = setTimeout(gCommit, 1100 + Math.random() * 1600);
+}
+function gCommit() {
+  gTarget = gLive[Math.floor(Math.random() * gLive.length)];
+  gState = 'commit'; gT0 = performance.now();
+  gSet('commit', `<span class="sym">${GDIRS[gTarget].sym}</span>`, GDIRS[gTarget].label + '!');
+  gLate = setTimeout(() => {
+    if (gState !== 'commit') return;
+    gState = 'between';
+    gResults.push({ n: GAME.stages[gStageI], correct: false, froze: true });
+    gSet('bad', 'FROZE', 'he scored before you moved');
+    gAdvance();
+  }, 1300);
+}
+function gRespond(i) {
+  if (gState === 'armed') {
+    clearTimeout(gWait); gState = 'between';
+    gResults.push({ n: GAME.stages[gStageI], correct: false, fake: true });
+    gSet('fake', 'BIT ON THE FAKE', "you committed before he did — that's the disguise working");
+    gAdvance(); return;
   }
+  if (gState !== 'commit') return;
+  clearTimeout(gLate);
+  const dt = Math.round(performance.now() - gT0);
+  const correct = i === gTarget, ok = correct && dt <= GAME.deadline;
+  gResults.push({ n: GAME.stages[gStageI], rt: dt, correct });
+  gState = 'between';
+  if (!correct) gSet('bad', 'WRONG WAY', 'he went ' + GDIRS[gTarget].label + ' — blown coverage');
+  else if (ok) gSet('good', dt + ' ms', 'STOPPED — you beat the play');
+  else gSet('bad', dt + ' ms', 'right way, but the play arrived at 600 ms');
+  gAdvance();
+}
+function gAdvance() {
+  gClearLive(); gRep++;
+  setTimeout(() => {
+    if (gRep < GAME.reps) { gStartRep(); return; }
+    gStageI++; gRep = 0;
+    if (gStageI < GAME.stages.length) {
+      gState = 'idle';
+      const n = GAME.stages[gStageI];
+      gSet('', 'Stage ' + (gStageI + 1),
+        (n === 2 ? 'now he can go two ways' : 'everything is live — welcome to guarding Chris Paul') + ' · click to continue');
+    } else gFinish();
+  }, 1250);
+}
+function gReset() {
+  clearTimeout(gWait); clearTimeout(gLate);
+  gResults = []; gStageI = 0; gRep = 0; gState = 'idle';
+  gClearLive();
+  $('#hickCard').style.display = 'none';
+  gSet('', 'Ready to guard?', 'click here to start · stage 1 of 3');
+}
+$('#gBox').addEventListener('pointerdown', () => {
+  if (gState === 'idle') gStartRep();
+  else if (gState === 'done') { gReset(); gStartRep(); }
+});
+document.addEventListener('keydown', e => {
+  const i = GDIRS.findIndex(d => d.key === e.key);
+  if (i < 0) return;
+  if (gState === 'armed' || gState === 'commit') { e.preventDefault(); gRespond(i); }
+});
+
+function median(a) {
+  const s = [...a].sort((x, y) => x - y), m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function gFinish() {
+  gState = 'done';
+  gSet('', 'Time.', 'your curve is below — click here to run it back');
+  const svg = $('#hickChart'); svg.innerHTML = '';
+  const correct = gResults.filter(r => r.correct);
+  if (correct.length < 3) {
+    $('#hickNote').innerHTML = '<b>Not enough clean reps to draw a curve</b> — you went the wrong way (or bit on fakes) too often. Which, to be fair, is also Hick’s law winning. Run it back.';
+    $('#hickCard').style.display = 'block';
+    return;
+  }
+  const L = { l: 96, r: 200, t: 30, b: 76, W: 920, H: 420 };
+  const xs = n => Math.log2(n + 1);
+  const xmin = xs(1) - 0.14, xmax = xs(4) + 0.14;
+  const X = v => L.l + (L.W - L.l - L.r) * (v - xmin) / (xmax - xmin);
+  const rts = correct.map(r => r.rt);
+  const yMin = Math.max(0, Math.min(250, ...rts) - 70);
+  const yMax = Math.max(700, ...rts) + 70;
+  const Y = v => L.t + (L.H - L.t - L.b) * (1 - (v - yMin) / (yMax - yMin));
+
+  // grid + y labels (100 ms steps)
+  for (let v = Math.ceil(yMin / 100) * 100; v <= yMax; v += 100) {
+    el('line', { x1: L.l, y1: Y(v), x2: L.W - L.r, y2: Y(v), stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
+    const t = el('text', { x: L.l - 10, y: Y(v) + 4, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'end', 'font-variant-numeric': 'tabular-nums' }, svg);
+    t.textContent = v + ' ms';
+  }
+  const yl = el('text', { x: 14, y: L.t - 8, fill: 'var(--muted)', 'font-size': 12.5 }, svg);
+  yl.textContent = 'your reaction time';
+
   // deadline
-  el('line', {x1: dx(DU.DEADLINE), y1: 30, x2: dx(DU.DEADLINE), y2: DU.H - 32, stroke: 'var(--ink-2)', 'stroke-width': 1.5}, duel);
-  const dl = el('text', {x: dx(DU.DEADLINE), y: 20, fill: 'var(--ink-2)', 'font-size': 12, 'text-anchor': 'middle', 'font-weight': 600}, duel);
-  dl.textContent = 'the play arrives';
+  el('line', { x1: L.l, y1: Y(GAME.deadline), x2: L.W - L.r, y2: Y(GAME.deadline), stroke: 'var(--critical)', 'stroke-width': 1.5 }, svg);
+  const dt = el('text', { x: L.W - L.r + 8, y: Y(GAME.deadline) + 4, fill: 'var(--critical)', 'font-size': 12, 'font-weight': 650 }, svg);
+  dt.textContent = 'the play arrives · 600 ms';
 
-  // lane labels
-  const lo = el('text', {x: 10, y: DU.yOff + 4, fill: 'var(--blue)', 'font-size': 13.5, 'font-weight': 700}, duel);
-  lo.textContent = 'OFFENSE';
-  const ld = el('text', {x: 10, y: DU.yDef + 4, fill: '#d95926', 'font-size': 13.5, 'font-weight': 700}, duel);
-  ld.textContent = 'DEFENSE';
-
-  // OFFENSE lane
-  seg(0, P.commit, DU.yOff, '#6da7ec', 'READ & DISGUISE', 'gathering cues, revealing none');
-  el('line', {x1: dx(P.commit), y1: DU.yOff - 24, x2: dx(P.commit), y2: DU.yOff + 24, stroke: 'var(--ink)', 'stroke-width': 2.5}, duel);
-  const ct = el('text', {x: dx(P.commit), y: DU.yOff - 32, fill: 'var(--ink)', 'font-size': 12.5, 'font-weight': 650, 'text-anchor': 'middle'}, duel);
-  ct.textContent = 'COMMIT';
-  // leak window (cues escaping before commit)
-  if (P.leak > 0) {
-    el('rect', {x: dx(P.readable), y: DU.yOff - 13, width: Math.max(0, dx(P.commit) - dx(P.readable) - 2), height: 26, rx: 4,
-                fill: 'none', stroke: '#d95926', 'stroke-width': 1.5, 'stroke-dasharray': '4 3'}, duel);
-    const lt = el('text', {x: dx((P.readable + P.commit) / 2), y: DU.yOff - 22, fill: '#d95926', 'font-size': 11.5, 'text-anchor': 'middle'}, duel);
-    lt.textContent = 'cues leaking';
-  }
-  // possibility fan after commit
-  const fanX = dx(P.commit), fanEndX = dx(DU.DEADLINE);
-  const collapsed = playheadT !== undefined && playheadT >= P.commit;
-  const angles = [-46, -30, -15, 0].slice(4 - P.opts);
-  angles.forEach((a, i) => {
-    const chosen = i === angles.length - 1;
-    const rad = a * Math.PI / 180, len = fanEndX - fanX;
-    const x2 = fanX + len * Math.cos(rad), y2 = DU.yOff + len * Math.sin(rad) * 0.55;
-    const op = chosen ? 1 : (collapsed ? 0.12 : 0.45);
-    el('line', {x1: fanX, y1: DU.yOff, x2, y2, stroke: 'var(--blue)', 'stroke-width': chosen ? 2.5 : 2, opacity: op,
-                'marker-end': ''}, duel);
-    el('path', {d: `M ${x2} ${y2} l -9 -4 l 2 4 l -2 4 z`,
-                transform: `rotate(${a * 0.55} ${x2} ${y2})`, fill: 'var(--blue)', opacity: op}, duel);
-    if (chosen) {
-      // the window repeats: a small second fan off the chosen route
-      [-24, 0].forEach(a2 => {
-        const r2 = a2 * Math.PI / 180;
-        el('line', {x1: x2, y1: y2, x2: x2 + 46 * Math.cos(r2), y2: y2 + 46 * Math.sin(r2) * 0.7,
-                    stroke: 'var(--blue)', 'stroke-width': 1.5, opacity: 0.35}, duel);
-      });
-    }
+  // x ticks
+  GAME.stages.forEach(n => {
+    const t1 = el('text', { x: X(xs(n)), y: L.H - L.b + 26, fill: 'var(--ink-2)', 'font-size': 13, 'text-anchor': 'middle' }, svg);
+    t1.textContent = n + (n > 1 ? ' options' : ' option');
+    const sub = n === 1 ? 'pure reaction' : (n === 2 ? 'one read' : 'guarding CP3');
+    const t2 = el('text', { x: X(xs(n)), y: L.H - L.b + 44, fill: 'var(--muted)', 'font-size': 11.5, 'text-anchor': 'middle' }, svg);
+    t2.textContent = sub;
   });
-  const fanLbl = el('text', {x: fanX + 12, y: DU.yOff - 46, fill: 'var(--muted)', 'font-size': 11.5}, duel);
-  fanLbl.textContent = P.opts > 1 ? P.opts + ' live options — the defense must honor all of them' : 'one option — nothing to honor';
+  const xl = el('text', { x: (L.l + L.W - L.r) / 2, y: L.H - 8, fill: 'var(--muted)', 'font-size': 12, 'text-anchor': 'middle' }, svg);
+  xl.textContent = 'options live at the commit (spaced by log₂(N+1) — Hick’s law predicts a straight line)';
 
-  // DEFENSE lane
-  seg(0, P.readable, DU.yDef, '#3a3a38', 'READ', "waiting for intent — can't safely commit");
-  seg(P.readable, P.readable + P.decide, DU.yDef, 'var(--yellow)', 'DECIDE', 'Hick’s law: ' + Math.round(P.decide) + ' ms for ' + P.opts + (P.opts > 1 ? ' options' : ' option'));
-  seg(P.readable + P.decide, P.finish, DU.yDef, 'var(--violet)', 'CLOSE', '');
-  // defense finish marker + verdict at deadline
-  const beaten = P.margin < 0;
-  el('line', {x1: dx(Math.min(P.finish, DU.tMax)), y1: DU.yDef - 24, x2: dx(Math.min(P.finish, DU.tMax)), y2: DU.yDef + 24,
-              stroke: beaten ? 'var(--critical)' : 'var(--good)', 'stroke-width': 2.5}, duel);
-  const vt = el('text', {x: Math.min(dx(Math.min(P.finish, DU.tMax)), 790), y: DU.yDef + 42, fill: beaten ? 'var(--critical)' : 'var(--good)',
-                'font-size': 12.5, 'font-weight': 700, 'text-anchor': 'middle'}, duel);
-  vt.textContent = beaten ? '✕ arrives ' + Math.abs(Math.round(P.margin)) + ' ms late' : '✓ in position, ' + Math.round(P.margin) + ' ms to spare';
+  // dots
+  const byN = { 1: [], 2: [], 4: [] };
+  const counts = { 1: 0, 2: 0, 4: 0 };
+  correct.forEach(r => {
+    byN[r.n].push(r.rt);
+    const jx = X(xs(r.n)) + (counts[r.n]++ - 1.5) * 11;
+    el('circle', { cx: jx, cy: Y(r.rt), r: 5, fill: r.rt <= GAME.deadline ? 'var(--blue)' : 'var(--critical)', stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+  });
 
-  // certainty-window bracket
-  const bx0 = dx(P.readable), bx1 = dx(DU.DEADLINE), by = DU.yDef + 62;
-  el('path', {d: `M ${bx0} ${by - 6} L ${bx0} ${by} L ${bx1} ${by} L ${bx1} ${by - 6}`, fill: 'none', stroke: 'var(--muted)', 'stroke-width': 1.2}, duel);
-  const bt = el('text', {x: (bx0 + bx1) / 2, y: by + 16, fill: 'var(--muted)', 'font-size': 11.5, 'text-anchor': 'middle'}, duel);
-  bt.textContent = 'window of certainty: ' + Math.max(0, Math.round(DU.DEADLINE - P.readable)) + ' ms';
-
-  // playhead
-  if (playheadT !== undefined) {
-    el('line', {x1: dx(playheadT), y1: 30, x2: dx(playheadT), y2: DU.H - 32, stroke: 'var(--ink)', 'stroke-width': 1.5, opacity: 0.8}, duel);
+  // medians + Hick fit
+  const meds = GAME.stages.map(n => byN[n].length ? median(byN[n]) : null);
+  const pts = GAME.stages.map((n, i) => meds[i] != null ? [xs(n), meds[i]] : null).filter(Boolean);
+  pts.forEach(p => el('line', { x1: X(p[0]) - 17, y1: Y(p[1]), x2: X(p[0]) + 17, y2: Y(p[1]), stroke: 'var(--ink)', 'stroke-width': 2.5 }, svg));
+  let slope = null, intc = null;
+  if (pts.length >= 2) {
+    const mx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+    const my = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+    slope = pts.reduce((s, p) => s + (p[0] - mx) * (p[1] - my), 0) / pts.reduce((s, p) => s + (p[0] - mx) ** 2, 0);
+    intc = my - slope * mx;
+    const fy = v => intc + slope * v;
+    el('line', { x1: X(xmin + 0.04), y1: Y(fy(xmin + 0.04)), x2: X(xmax - 0.04), y2: Y(fy(xmax - 0.04)), stroke: 'var(--yellow)', 'stroke-width': 2 }, svg);
+    let fitLblY = Y(fy(xmax - 0.04));
+    const dlY = Y(GAME.deadline);
+    if (Math.abs(fitLblY - dlY) < 18) fitLblY = dlY + 20;
+    el('line', { x1: L.W - L.r + 8, y1: fitLblY - 4, x2: L.W - L.r + 22, y2: fitLblY - 4, stroke: 'var(--yellow)', 'stroke-width': 3, 'stroke-linecap': 'round' }, svg);
+    const ft = el('text', { x: L.W - L.r + 28, y: fitLblY, fill: 'var(--ink-2)', 'font-size': 12 }, svg);
+    ft.textContent = `your fit: ${Math.round(intc)} + ${Math.round(slope)}·log₂(N+1)`;
   }
 
-  // readouts
-  $('#dCommitV').textContent = P.commit + ' ms';
-  $('#dLeakV').textContent = P.leak + ' ms';
-  $('#dOptsV').textContent = P.opts;
-  $('#duelWindow').textContent = Math.max(0, Math.round(DU.DEADLINE - P.readable)) + ' ms';
-  const v = $('#duelVerdict');
-  v.textContent = beaten ? 'BEATEN' : 'STOPPED';
-  v.style.color = beaten ? 'var(--critical)' : 'var(--good)';
-  $('#duelVerdictSub').textContent = beaten
-    ? 'defense arrives ' + Math.abs(Math.round(P.margin)) + ' ms after the play'
-    : 'defense in position with ' + Math.round(P.margin) + ' ms to spare';
+  // note
+  const fakes = gResults.filter(r => r.fake).length;
+  const wrongs = gResults.filter(r => !r.correct && !r.fake && !r.froze).length;
+  const froze = gResults.filter(r => r.froze).length;
+  let note = `<b>Your medians:</b> ${GAME.stages.map((n, i) => meds[i] != null ? `${n} option${n > 1 ? 's' : ''} — ${Math.round(meds[i])} ms` : `${n} — n/a`).join(' · ')}.`;
+  if (slope != null) note += ` Your Hick slope ≈ <b>${Math.round(slope)} ms per bit</b> of uncertainty.`;
+  if (meds[0] != null && meds[2] != null) {
+    const d = Math.round(meds[2] - meds[0]);
+    if (d > 0) note += ` Going from one live option to four cost you <b>${d} ms</b> — at 95 mph, that's ~${Math.round(d * 0.139)} feet of fastball flight.`;
+    else note += ` Your 4-option median beat your 1-option median — either you're wired differently or the sample is small; run it back.`;
+  }
+  const mess = [];
+  if (fakes) mess.push(`bit on ${fakes} fake${fakes > 1 ? 's' : ''}`);
+  if (wrongs) mess.push(`went the wrong way ${wrongs}×`);
+  if (froze) mess.push(`froze ${froze}×`);
+  if (mess.length) note += ` You also ${mess.join(', ')} — possibility taxes the defense even before the clock does.`;
+  $('#hickNote').innerHTML = note;
+  $('#hickCard').style.display = 'block';
+  $('#hickCard').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
 }
-['dCommit', 'dLeak', 'dOpts'].forEach(id => $('#' + id).addEventListener('input', () => { cancelAnimationFrame(duelAnim); drawDuel(); }));
-$('#presetRookie').addEventListener('click', () => {
-  $('#dCommit').value = 300; $('#dLeak').value = 150; $('#dOpts').value = 1; drawDuel();
-});
-$('#presetElite').addEventListener('click', () => {
-  $('#dCommit').value = 520; $('#dLeak').value = 0; $('#dOpts').value = 3; drawDuel();
-});
-$('#duelPlay').addEventListener('click', () => {
-  cancelAnimationFrame(duelAnim);
-  const start = performance.now(), SLOW = 10;
-  const step = now => {
-    const t = (now - start) / SLOW;
-    drawDuel(Math.min(t, DU.tMax));
-    if (t < DU.tMax) duelAnim = requestAnimationFrame(step);
-    else drawDuel();
-  };
-  duelAnim = requestAnimationFrame(step);
-});
-drawDuel();
+// headless/demo hook: ?hickdemo renders the results card with synthetic reps
+if (location.search.includes('hickdemo')) {
+  [[1, 290], [2, 400], [4, 545]].forEach(([n, base]) => {
+    for (let i = 0; i < 4; i++) gResults.push({ n, rt: base + [12, 55, -20, 130][i], correct: i !== 3 || n !== 4 });
+  });
+  gResults.push({ n: 4, fake: true, correct: false });
+  gFinish();
+}
 
 /* ============ ACT 3b: reaction test ============ */
 const box = $('#rxBox');
